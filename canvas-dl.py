@@ -2,6 +2,7 @@ import argparse
 from canvasapi import Canvas
 from pathlib import Path
 from urllib.request import urlretrieve
+from threading import Thread
 # from urllib.parse import unquote
 
 HEADER = '\033[95m'
@@ -51,8 +52,12 @@ def file_dl(folder, dir):
         file_dl(folder, f"{dir}{folder.name}/")
     Path(dir).mkdir(parents=True, exist_ok=True)
     for file in folder.get_files():
-        print(dir + file.display_name)
-        file_name, headers = urlretrieve(file.url, dir+file.display_name)
+        if not Path(dir + file.display_name).is_file():
+            print(dir + file.display_name)
+            Thread(target=urlretrieve,
+                   args=(file.url, dir+file.display_name)).start()
+        else:
+            print(WARNING + "Skipped " + dir + file.display_name + ENDC)
 
 
 for id in course_id:
@@ -68,7 +73,7 @@ for id in course_id:
     if root_folder is None:
         print(f"{FAIL}  Cannot find the root folder{ENDC}")
     else:
-        file_dl(root_folder, f"Courses/{course.name}/")
-
-    # except Canvas.exceptions.Unauthorized as e:
-    #     print(f"{FAIL}  Cannot access files: {e}{ENDC}")
+        try:
+            file_dl(root_folder, f"Courses/{course.name}/")
+        except Canvas.exceptions.Unauthorized as e:
+            print(f"{FAIL}  Cannot access files: {e}{ENDC}")
